@@ -1,0 +1,5 @@
+{
+  "name": "WorkLog Pro 2026",
+  "description": "A comprehensive work hour tracker and salary calculator designed for freelancers and hourly workers. Tracks shifts, break times, and calculates earnings with a default rate of 220 TWD.",
+  "requestFramePermissions": []
+}
