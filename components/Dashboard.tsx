@@ -1,7 +1,7 @@
 import React from 'react';
 import { WorkLog } from '../types';
-import { formatCurrency, formatDuration, downloadCSV } from '../utils';
-import { TrendingUp, Clock, CalendarDays, Download, Table as TableIcon, Tent } from 'lucide-react';
+import { formatCurrency, formatDuration, downloadCSV, generateTextReport } from '../utils';
+import { TrendingUp, Clock, CalendarDays, Download, Table as TableIcon, Tent, Copy } from 'lucide-react';
 import DailySummaryList from './DailySummaryList';
 
 interface DashboardProps {
@@ -45,6 +45,17 @@ const Dashboard: React.FC<DashboardProps> = ({ logs }) => {
     .map((stats: MonthlyStats & { tempDays: Set<string> }) => ({...stats, daysWorked: stats.tempDays.size}))
     .sort((a, b) => b.month.localeCompare(a.month));
 
+  const handleCopyReport = async () => {
+    const text = generateTextReport(logs);
+    try {
+      await navigator.clipboard.writeText(text);
+      alert("報表內容已複製！\n您可以直接貼上至 Line、備忘錄或 Email。");
+    } catch (err) {
+      console.error("Copy failed", err);
+      alert("複製失敗，請檢查瀏覽器權限。");
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Stats Cards */}
@@ -82,19 +93,29 @@ const Dashboard: React.FC<DashboardProps> = ({ logs }) => {
 
       {/* Monthly Statistics Table */}
       <div className="bg-white rounded-2xl shadow-sm border border-stone-200 overflow-hidden">
-        <div className="p-6 border-b border-stone-100 flex justify-between items-center flex-wrap gap-4">
+        <div className="p-6 border-b border-stone-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <h3 className="text-lg font-bold text-stone-800 flex items-center gap-2">
             <Tent className="w-5 h-5 text-emerald-600" />
             月度統計報表
           </h3>
+          
           {logs.length > 0 && (
-            <button 
-              onClick={() => downloadCSV(logs)}
-              className="flex items-center gap-2 px-4 py-2 bg-stone-700 text-white text-sm font-medium rounded-lg hover:bg-stone-600 transition"
-            >
-              <Download className="w-4 h-4" />
-              下載 Excel (CSV)
-            </button>
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <button 
+                onClick={handleCopyReport}
+                className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2 bg-emerald-50 text-emerald-700 border border-emerald-200 text-sm font-medium rounded-lg hover:bg-emerald-100 transition"
+              >
+                <Copy className="w-4 h-4" />
+                複製文字報表
+              </button>
+              <button 
+                onClick={() => downloadCSV(logs)}
+                className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2 bg-stone-700 text-white text-sm font-medium rounded-lg hover:bg-stone-600 transition"
+              >
+                <Download className="w-4 h-4" />
+                下載 CSV
+              </button>
+            </div>
           )}
         </div>
         

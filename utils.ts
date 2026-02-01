@@ -109,7 +109,7 @@ export const downloadCSV = (logs: WorkLog[]) => {
       log.startTime,
       log.endTime,
       log.breakMinutes,
-      (log.totalMinutes / 60).toFixed(2), // Removed "小時" to make it Excel calculation friendly
+      (log.totalMinutes / 60).toFixed(2), 
       (log.regularMinutes / 60).toFixed(2),
       (log.overtimeLevel1Minutes / 60).toFixed(2),
       (log.overtimeLevel2Minutes / 60).toFixed(2),
@@ -127,8 +127,6 @@ export const downloadCSV = (logs: WorkLog[]) => {
     return acc;
   }, {} as Record<string, { minutes: number, pay: number }>);
 
-  // Format Daily Rows: Map date to columns matching the header above roughly for readability
-  // Date col 0, Total Hours col 4, Total Pay col 9
   const dailyRows = Object.entries(dailyStats)
     .sort((a, b) => b[0].localeCompare(a[0]))
     .map(([date, stat]) => {
@@ -168,4 +166,44 @@ export const downloadCSV = (logs: WorkLog[]) => {
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
+};
+
+// Generate Text Report for Clipboard
+export const generateTextReport = (logs: WorkLog[]): string => {
+  // Sort ascending by date for readable timeline
+  const sorted = [...logs].sort((a, b) => {
+     const dateComp = new Date(a.date).getTime() - new Date(b.date).getTime();
+     if (dateComp !== 0) return dateComp;
+     return a.startTime.localeCompare(b.startTime);
+  });
+  
+  const totalPay = sorted.reduce((acc, log) => acc + log.totalPay, 0);
+  const totalMinutes = sorted.reduce((acc, log) => acc + log.totalMinutes, 0);
+  const daysWorked = new Set(sorted.map(l => l.date)).size;
+
+  let text = `【WorkLog Pro 薪資報表】\n`;
+  text += `產生日期: ${getTodayString()}\n`;
+  text += `------------------------\n`;
+  text += `總工作天數: ${daysWorked} 天\n`;
+  text += `總工時: ${formatDuration(totalMinutes)}\n`;
+  text += `總收入: ${formatCurrency(totalPay)}\n`;
+  text += `------------------------\n\n`;
+
+  let currentMonth = "";
+  sorted.forEach(log => {
+    const month = log.date.substring(0, 7);
+    if (month !== currentMonth) {
+      text += `\n[ ${month} ]\n`;
+      currentMonth = month;
+    }
+    const overtime = (log.overtimeLevel1Minutes || 0) + (log.overtimeLevel2Minutes || 0);
+    const date = log.date.substring(5); // MM-DD
+    
+    text += `${date} (${log.startTime}~${log.endTime}) ${formatDuration(log.totalMinutes)} | $${log.totalPay}`;
+    if (overtime > 0) text += ` (含加班)`;
+    if (log.note) text += ` | ${log.note}`;
+    text += `\n`;
+  });
+
+  return text;
 };
