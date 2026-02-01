@@ -129,6 +129,9 @@ const App: React.FC = () => {
       await updateRemoteLogs(pantryId, updatedLogs);
       setIsSyncing(false);
     }
+    
+    // Alert user after deletion
+    setTimeout(() => alert("紀錄已成功刪除。"), 100);
   };
 
   return (

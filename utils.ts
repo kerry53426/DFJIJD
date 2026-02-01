@@ -96,11 +96,12 @@ export const calculatePayBreakdown = (totalMinutes: number, hourlyRate: number) 
   };
 };
 
-// Export to CSV
+// Export to CSV with Summary
 export const downloadCSV = (logs: WorkLog[]) => {
-  // Add BOM for Excel to read Chinese correctly
   const BOM = "\uFEFF";
-  const headers = ["日期", "開始時間", "結束時間", "休息時間(分)", "總工時", "正常工時", "加班(前2h)", "加班(2h後)", "時薪", "總薪資", "備註"];
+  
+  // --- Section 1: Detailed Logs ---
+  const headers = ["日期", "開始時間", "結束時間", "休息時間(分)", "總工時(時)", "正常工時(時)", "加班前2h(時)", "加班2h後(時)", "時薪", "單次薪資", "備註"];
   
   const rows = logs.map(log => {
     return [
@@ -108,23 +109,62 @@ export const downloadCSV = (logs: WorkLog[]) => {
       log.startTime,
       log.endTime,
       log.breakMinutes,
-      (log.totalMinutes / 60).toFixed(2) + "小時",
-      (log.regularMinutes / 60).toFixed(2) + "小時",
-      (log.overtimeLevel1Minutes / 60).toFixed(2) + "小時",
-      (log.overtimeLevel2Minutes / 60).toFixed(2) + "小時",
+      (log.totalMinutes / 60).toFixed(2), // Removed "小時" to make it Excel calculation friendly
+      (log.regularMinutes / 60).toFixed(2),
+      (log.overtimeLevel1Minutes / 60).toFixed(2),
+      (log.overtimeLevel2Minutes / 60).toFixed(2),
       log.hourlyRate,
       log.totalPay,
-      `"${log.note || ''}"` // Quote notes to handle commas
+      `"${log.note || ''}"`
     ].join(",");
   });
 
-  const csvContent = BOM + [headers.join(","), ...rows].join("\n");
+  // --- Section 2: Daily Summary Calculation ---
+  const dailyStats = logs.reduce((acc, log) => {
+    if (!acc[log.date]) acc[log.date] = { minutes: 0, pay: 0 };
+    acc[log.date].minutes += log.totalMinutes;
+    acc[log.date].pay += log.totalPay;
+    return acc;
+  }, {} as Record<string, { minutes: number, pay: number }>);
+
+  // Format Daily Rows: Map date to columns matching the header above roughly for readability
+  // Date col 0, Total Hours col 4, Total Pay col 9
+  const dailyRows = Object.entries(dailyStats)
+    .sort((a, b) => b[0].localeCompare(a[0]))
+    .map(([date, stat]) => {
+        return `${date},,,,"${(stat.minutes/60).toFixed(2)}",,,,,,"${stat.pay}","(每日總計)"`;
+    });
+
+  // --- Section 3: Monthly Summary Calculation ---
+  const monthlyStats = logs.reduce((acc, log) => {
+    const month = log.date.substring(0, 7); // YYYY-MM
+    if (!acc[month]) acc[month] = 0;
+    acc[month] += log.totalPay;
+    return acc;
+  }, {} as Record<string, number>);
+
+  const monthlyRows = Object.entries(monthlyStats)
+    .sort((a, b) => b[0].localeCompare(a[0]))
+    .map(([month, pay]) => `${month} 月,,,,,,,,,"${pay}","(月度總計)"`);
+
+  // Construct CSV Content
+  let csvContent = BOM + headers.join(",") + "\n" + rows.join("\n");
+  
+  csvContent += "\n\n";
+  csvContent += "=== 每日薪資統計 ===,,,,,,,,,\n";
+  csvContent += "日期,,,,總工時(時),,,,,當日總薪資,\n";
+  csvContent += dailyRows.join("\n");
+
+  csvContent += "\n\n";
+  csvContent += "=== 月度薪資總計 ===,,,,,,,,,\n";
+  csvContent += "月份,,,,,,,,,當月總薪資,\n";
+  csvContent += monthlyRows.join("\n");
   
   const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.setAttribute("href", url);
-  link.setAttribute("download", `WorkLog_Export_${getTodayString()}.csv`);
+  link.setAttribute("download", `WorkLog_Report_${getTodayString()}.csv`);
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);

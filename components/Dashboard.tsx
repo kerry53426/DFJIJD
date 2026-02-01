@@ -119,12 +119,21 @@ const Dashboard: React.FC<DashboardProps> = ({ logs }) => {
                     <td className="px-6 py-4 text-amber-600 font-medium">
                       {stat.overtimeMinutes > 0 ? formatDuration(stat.overtimeMinutes) : '-'}
                     </td>
-                    <td className="px-6 py-4 text-right font-bold text-emerald-700 text-base">
+                    <td className="px-6 py-4 text-right font-bold text-emerald-700 text-lg">
                       {formatCurrency(stat.totalPay)}
                     </td>
                   </tr>
                 ))}
               </tbody>
+              <tfoot className="bg-emerald-50 font-bold text-emerald-900 border-t-2 border-emerald-100">
+                <tr>
+                  <td className="px-6 py-4">總計</td>
+                  <td className="px-6 py-4">{daysWorked} 天</td>
+                  <td className="px-6 py-4">{formatDuration(totalMinutes)}</td>
+                  <td className="px-6 py-4">-</td>
+                  <td className="px-6 py-4 text-right">{formatCurrency(totalPay)}</td>
+                </tr>
+              </tfoot>
             </table>
           </div>
         ) : (

@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Save, Clock, DollarSign, Calendar, Zap, Edit3 } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Save, Clock, DollarSign, Calendar, Zap, Edit3, CheckCircle } from 'lucide-react';
 import { WorkLog } from '../types';
 import { calculateDurationMinutes, calculatePayBreakdown, formatCurrency, formatDuration } from '../utils';
 import ClockInTimer from './ClockInTimer';
@@ -14,10 +14,12 @@ const WorkEntryForm: React.FC<WorkEntryFormProps> = ({ onAddLog, defaultRate, pa
   const [date, setDate] = useState<string>('2026-02-01');
   const [startTime, setStartTime] = useState<string>('09:00');
   const [endTime, setEndTime] = useState<string>('18:00');
-  // Default break time set to 0 as requested
   const [breakMinutes, setBreakMinutes] = useState<number>(0);
   const [hourlyRate, setHourlyRate] = useState<number>(defaultRate);
   const [note, setNote] = useState<string>('');
+  
+  // Success Message State
+  const [showSuccess, setShowSuccess] = useState(false);
   
   // Real-time calculation
   const rawDuration = calculateDurationMinutes(startTime, endTime);
@@ -26,7 +28,16 @@ const WorkEntryForm: React.FC<WorkEntryFormProps> = ({ onAddLog, defaultRate, pa
   const { regularMinutes, overtimeLevel1Minutes, overtimeLevel2Minutes, totalPay } = calculatePayBreakdown(actualWorkMinutes, hourlyRate);
   const hasOvertime = overtimeLevel1Minutes > 0 || overtimeLevel2Minutes > 0;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  useEffect(() => {
+    if (showSuccess) {
+      const timer = setTimeout(() => {
+        setShowSuccess(false);
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [showSuccess]);
+
+  const handleManualSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
     if (actualWorkMinutes <= 0) {
@@ -51,12 +62,29 @@ const WorkEntryForm: React.FC<WorkEntryFormProps> = ({ onAddLog, defaultRate, pa
 
     onAddLog(newLog);
     setNote('');
+    setShowSuccess(true);
+    // Smooth scroll to top to see message
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  // Wrapper for ClockInTimer to show success message when clocking out
+  const handleClockInLog = (log: WorkLog) => {
+      onAddLog(log);
+      setShowSuccess(true);
   };
 
   return (
     <div className="space-y-6">
+      {/* Success Notification */}
+      {showSuccess && (
+        <div className="bg-emerald-100 border border-emerald-400 text-emerald-800 px-4 py-3 rounded-xl flex items-center gap-3 shadow-sm animate-bounce-short">
+          <CheckCircle className="w-5 h-5 text-emerald-600" />
+          <span className="font-bold">儲存成功！紀錄已更新。</span>
+        </div>
+      )}
+
       {/* Real-time Clock In Section */}
-      <ClockInTimer onAddLog={onAddLog} defaultRate={defaultRate} pantryId={pantryId} />
+      <ClockInTimer onAddLog={handleClockInLog} defaultRate={defaultRate} pantryId={pantryId} />
 
       <div className="relative">
         <div className="absolute inset-0 flex items-center" aria-hidden="true">
@@ -74,7 +102,7 @@ const WorkEntryForm: React.FC<WorkEntryFormProps> = ({ onAddLog, defaultRate, pa
           補登工時
         </h2>
         
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleManualSubmit} className="space-y-4">
           {/* Date Row */}
           <div>
             <label className="block text-sm font-medium text-stone-600 mb-1">日期</label>

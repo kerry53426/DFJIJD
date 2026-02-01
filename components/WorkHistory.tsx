@@ -53,7 +53,7 @@ const WorkHistory: React.FC<WorkHistoryProps> = ({ logs, onDeleteLog }) => {
              {monthlyLogs.map((log) => {
                const overtime = (log.overtimeLevel1Minutes || 0) + (log.overtimeLevel2Minutes || 0);
                return (
-                  <div key={log.id} className="bg-white rounded-xl shadow-sm border border-stone-200 p-4 hover:shadow-md transition duration-200 border-l-4 border-l-emerald-500">
+                  <div key={log.id} className="bg-white rounded-xl shadow-sm border border-stone-200 p-4 hover:shadow-md transition duration-200 border-l-4 border-l-emerald-500 relative group">
                     <div className="flex justify-between items-start">
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-2">
@@ -85,17 +85,19 @@ const WorkHistory: React.FC<WorkHistoryProps> = ({ logs, onDeleteLog }) => {
                         </div>
                       </div>
 
-                      <div className="flex flex-col items-end gap-2">
+                      <div className="flex flex-col items-end justify-between gap-4">
                          <span className="text-lg font-bold text-emerald-700">
                           {formatCurrency(log.totalPay)}
                          </span>
                          <button 
                            onClick={() => {
-                             if(window.confirm('確定要刪除這筆紀錄嗎?')) onDeleteLog(log.id);
+                             if(window.confirm('確定要刪除這筆紀錄嗎? 此動作無法復原。')) onDeleteLog(log.id);
                            }}
-                           className="text-stone-400 hover:text-red-500 transition p-1"
+                           className="flex items-center gap-1 text-stone-400 hover:text-red-500 hover:bg-red-50 px-2 py-1 rounded transition"
+                           title="刪除"
                          >
                            <Trash2 className="w-4 h-4" />
+                           <span className="text-xs font-medium">刪除</span>
                          </button>
                       </div>
                     </div>
