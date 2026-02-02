@@ -3,7 +3,12 @@ export interface WorkLog {
   date: string; // YYYY-MM-DD
   startTime: string; // HH:mm
   endTime: string; // HH:mm
+  
+  // Break Details
+  breakStartTime?: string; // HH:mm (Optional)
+  breakEndTime?: string; // HH:mm (Optional)
   breakMinutes: number;
+  
   hourlyRate: number;
   totalMinutes: number; // Total worked minutes (excluding break)
   

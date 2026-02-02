@@ -115,7 +115,8 @@ const App: React.FC = () => {
       await updateRemoteLogs(pantryId, updatedLogs);
       setIsSyncing(false);
     }
-    setActiveTab('history');
+    // Modify: Stay on current tab instead of switching to history
+    // setActiveTab('history'); 
   };
 
   // Delete Log

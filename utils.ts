@@ -33,7 +33,8 @@ export const calculateDurationMinutes = (start: string, end: string): number => 
 export const formatDuration = (minutes: number): string => {
   const h = Math.floor(minutes / 60);
   const m = minutes % 60;
-  return `${h}小時 ${m}分鐘`;
+  // If 0 mins, return 0 for cleaner look in some contexts, but let's keep it explicit
+  return `${h}小時${m > 0 ? ` ${m}分` : ''}`;
 };
 
 // Format milliseconds into HH:MM:SS
@@ -101,13 +102,15 @@ export const downloadCSV = (logs: WorkLog[]) => {
   const BOM = "\uFEFF";
   
   // --- Section 1: Detailed Logs ---
-  const headers = ["日期", "開始時間", "結束時間", "休息時間(分)", "總工時(時)", "正常工時(時)", "加班前2h(時)", "加班2h後(時)", "時薪", "單次薪資", "備註"];
+  const headers = ["日期", "開始時間", "結束時間", "休息開始", "休息結束", "休息(分)", "總工時(時)", "正常工時(時)", "加班前2h(時)", "加班2h後(時)", "時薪", "單次薪資", "備註"];
   
   const rows = logs.map(log => {
     return [
       log.date,
       log.startTime,
       log.endTime,
+      log.breakStartTime || '',
+      log.breakEndTime || '',
       log.breakMinutes,
       (log.totalMinutes / 60).toFixed(2), 
       (log.regularMinutes / 60).toFixed(2),
@@ -130,7 +133,7 @@ export const downloadCSV = (logs: WorkLog[]) => {
   const dailyRows = Object.entries(dailyStats)
     .sort((a, b) => b[0].localeCompare(a[0]))
     .map(([date, stat]) => {
-        return `${date},,,,"${(stat.minutes/60).toFixed(2)}",,,,,,"${stat.pay}","(每日總計)"`;
+        return `${date},,,,,,,"${(stat.minutes/60).toFixed(2)}",,,,,,"${stat.pay}","(每日總計)"`;
     });
 
   // --- Section 3: Monthly Summary Calculation ---
@@ -143,19 +146,19 @@ export const downloadCSV = (logs: WorkLog[]) => {
 
   const monthlyRows = Object.entries(monthlyStats)
     .sort((a, b) => b[0].localeCompare(a[0]))
-    .map(([month, pay]) => `${month} 月,,,,,,,,,"${pay}","(月度總計)"`);
+    .map(([month, pay]) => `${month} 月,,,,,,,,,,,"${pay}","(月度總計)"`);
 
   // Construct CSV Content
   let csvContent = BOM + headers.join(",") + "\n" + rows.join("\n");
   
   csvContent += "\n\n";
-  csvContent += "=== 每日薪資統計 ===,,,,,,,,,\n";
-  csvContent += "日期,,,,總工時(時),,,,,當日總薪資,\n";
+  csvContent += "=== 每日薪資統計 ===,,,,,,,,,,,\n";
+  csvContent += "日期,,,,,,總工時(時),,,,,當日總薪資,\n";
   csvContent += dailyRows.join("\n");
 
   csvContent += "\n\n";
-  csvContent += "=== 月度薪資總計 ===,,,,,,,,,\n";
-  csvContent += "月份,,,,,,,,,當月總薪資,\n";
+  csvContent += "=== 月度薪資總計 ===,,,,,,,,,,,\n";
+  csvContent += "月份,,,,,,,,,,,當月總薪資,\n";
   csvContent += monthlyRows.join("\n");
   
   const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
@@ -199,9 +202,23 @@ export const generateTextReport = (logs: WorkLog[]): string => {
     const overtime = (log.overtimeLevel1Minutes || 0) + (log.overtimeLevel2Minutes || 0);
     const date = log.date.substring(5); // MM-DD
     
-    text += `${date} (${log.startTime}~${log.endTime}) ${formatDuration(log.totalMinutes)} | $${log.totalPay}`;
-    if (overtime > 0) text += ` (含加班)`;
-    if (log.note) text += ` | ${log.note}`;
+    // Main Line
+    text += `${date} (${log.startTime}~${log.endTime}) 總計: ${formatDuration(log.totalMinutes)} | $${log.totalPay}\n`;
+    
+    // Details Line
+    text += `   ↳ 正常: ${formatDuration(log.regularMinutes)}`;
+    if (overtime > 0) {
+        text += ` | 加班: ${formatDuration(overtime)}`;
+    }
+    
+    // Break Info
+    if (log.breakStartTime && log.breakEndTime) {
+         text += ` | 休: ${log.breakStartTime}-${log.breakEndTime}`;
+    } else if (log.breakMinutes > 0) {
+         text += ` | 休: ${log.breakMinutes}分`;
+    }
+
+    if (log.note) text += ` | 備註: ${log.note}`;
     text += `\n`;
   });
 

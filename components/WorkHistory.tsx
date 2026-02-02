@@ -240,12 +240,19 @@ const WorkHistory: React.FC<WorkHistoryProps> = ({ logs, onDeleteLog }) => {
                                   <div className="flex items-center gap-1">
                                     <span className="font-medium">工時: {formatDuration(log.totalMinutes)}</span>
                                   </div>
-                                  {log.breakMinutes > 0 && (
-                                    <div className="flex items-center gap-1 text-stone-400">
+                                  
+                                  {/* Break Information Display */}
+                                  {(log.breakMinutes > 0) && (
+                                    <div className="flex items-center gap-1 text-stone-500">
                                       <Coffee className="w-3 h-3" />
-                                      <span>休 {log.breakMinutes}m</span>
+                                      {log.breakStartTime && log.breakEndTime ? (
+                                         <span>休 {log.breakStartTime}-{log.breakEndTime} ({log.breakMinutes}m)</span>
+                                      ) : (
+                                         <span>休 {log.breakMinutes}m</span>
+                                      )}
                                     </div>
                                   )}
+                                  
                                   {overtime > 0 && (
                                     <div className="flex items-center gap-1 text-amber-600 font-bold">
                                       <Zap className="w-3 h-3" />

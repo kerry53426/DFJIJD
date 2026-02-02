@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Save, Clock, DollarSign, Calendar, Zap, Edit3, CheckCircle } from 'lucide-react';
+import { Save, Clock, DollarSign, Calendar, Zap, Edit3, CheckCircle, Coffee } from 'lucide-react';
 import { WorkLog } from '../types';
 import { calculateDurationMinutes, calculatePayBreakdown, formatCurrency, formatDuration } from '../utils';
 import ClockInTimer from './ClockInTimer';
@@ -14,14 +14,29 @@ const WorkEntryForm: React.FC<WorkEntryFormProps> = ({ onAddLog, defaultRate, pa
   const [date, setDate] = useState<string>('2026-02-01');
   const [startTime, setStartTime] = useState<string>('09:00');
   const [endTime, setEndTime] = useState<string>('18:00');
+  
+  // Break Time State
+  const [breakStartTime, setBreakStartTime] = useState<string>('');
+  const [breakEndTime, setBreakEndTime] = useState<string>('');
   const [breakMinutes, setBreakMinutes] = useState<number>(0);
+
   const [hourlyRate, setHourlyRate] = useState<number>(defaultRate);
   const [note, setNote] = useState<string>('');
   
   // Success Message State
   const [showSuccess, setShowSuccess] = useState(false);
   
-  // Real-time calculation
+  // Real-time calculation for Break
+  useEffect(() => {
+    if (breakStartTime && breakEndTime) {
+      const mins = calculateDurationMinutes(breakStartTime, breakEndTime);
+      setBreakMinutes(Math.max(0, mins));
+    } else {
+      setBreakMinutes(0);
+    }
+  }, [breakStartTime, breakEndTime]);
+
+  // Real-time calculation for Work
   const rawDuration = calculateDurationMinutes(startTime, endTime);
   const actualWorkMinutes = Math.max(0, rawDuration - breakMinutes);
   
@@ -51,6 +66,8 @@ const WorkEntryForm: React.FC<WorkEntryFormProps> = ({ onAddLog, defaultRate, pa
       startTime,
       endTime,
       breakMinutes,
+      breakStartTime: breakStartTime || undefined,
+      breakEndTime: breakEndTime || undefined,
       hourlyRate,
       totalMinutes: actualWorkMinutes,
       regularMinutes,
@@ -61,6 +78,7 @@ const WorkEntryForm: React.FC<WorkEntryFormProps> = ({ onAddLog, defaultRate, pa
     };
 
     onAddLog(newLog);
+    // Do not clear Date/Rate, users usually add logs for same period/rate
     setNote('');
     setShowSuccess(true);
     // Smooth scroll to top to see message
@@ -142,19 +160,40 @@ const WorkEntryForm: React.FC<WorkEntryFormProps> = ({ onAddLog, defaultRate, pa
             </div>
           </div>
 
-          {/* Break & Rate Row */}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-stone-600 mb-1">休息時間 (分鐘)</label>
-              <input 
-                type="number" 
-                min="0"
-                value={breakMinutes}
-                onChange={(e) => setBreakMinutes(Number(e.target.value))}
-                className="w-full px-4 py-2 border border-stone-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none transition bg-stone-50"
-              />
-            </div>
-            <div>
+          {/* Break Section - CHANGED to Time Inputs */}
+          <div className="bg-stone-50 p-3 rounded-lg border border-stone-200">
+             <div className="flex items-center gap-2 mb-2 text-stone-600">
+                <Coffee className="w-4 h-4" />
+                <span className="text-sm font-medium">中間休息 (選填)</span>
+             </div>
+             <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs text-stone-500 mb-1">休息開始</label>
+                  <input 
+                    type="time" 
+                    value={breakStartTime}
+                    onChange={(e) => setBreakStartTime(e.target.value)}
+                    className="w-full px-3 py-1.5 border border-stone-300 rounded-md focus:ring-1 focus:ring-emerald-500 outline-none bg-white text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-stone-500 mb-1">休息結束</label>
+                  <input 
+                    type="time" 
+                    value={breakEndTime}
+                    onChange={(e) => setBreakEndTime(e.target.value)}
+                    className="w-full px-3 py-1.5 border border-stone-300 rounded-md focus:ring-1 focus:ring-emerald-500 outline-none bg-white text-sm"
+                  />
+                </div>
+             </div>
+             {breakMinutes > 0 && (
+                <div className="mt-2 text-xs text-stone-500 text-right">
+                   共休息: <span className="font-bold text-stone-700">{formatDuration(breakMinutes)}</span>
+                </div>
+             )}
+          </div>
+
+          <div>
               <label className="block text-sm font-medium text-stone-600 mb-1">時薪 (TWD)</label>
               <div className="relative">
                 <span className="absolute left-3 top-2 text-stone-400 font-bold">$</span>
@@ -167,7 +206,6 @@ const WorkEntryForm: React.FC<WorkEntryFormProps> = ({ onAddLog, defaultRate, pa
                 />
               </div>
             </div>
-          </div>
 
           <div>
             <label className="block text-sm font-medium text-stone-600 mb-1">備註 (選填)</label>
