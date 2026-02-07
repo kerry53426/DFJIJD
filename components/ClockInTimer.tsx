@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Play, Square, Coffee, StepForward, Clock, Cloud, CloudOff, RefreshCw, Tent } from 'lucide-react';
 import { WorkLog } from '../types';
-import { calculatePayBreakdown, formatElapsedTime } from '../utils';
+import { calculatePayBreakdown, formatElapsedTime, roundTo30Minutes } from '../utils';
 import { updateRemoteSession, getRemoteSession, ActiveSession } from '../pantry';
 
 interface ClockInTimerProps {
@@ -159,10 +159,13 @@ const ClockInTimer: React.FC<ClockInTimerProps> = ({ onAddLog, defaultRate, pant
     const workDurationMs = totalDurationMs - finalAccumulatedBreak;
     
     const breakMinutes = Math.floor(finalAccumulatedBreak / 60000);
-    const actualWorkMinutes = Math.floor(workDurationMs / 60000);
+    const rawWorkMinutes = Math.floor(workDurationMs / 60000);
+
+    // Apply 30-minute rounding
+    const actualWorkMinutes = roundTo30Minutes(rawWorkMinutes);
 
     if (actualWorkMinutes <= 0) {
-      if(!window.confirm("工時過短 (小於1分鐘)，確定要儲存嗎?")) return;
+      if(!window.confirm(`實際工時 ${rawWorkMinutes} 分鐘，未滿 30 分鐘不予計算 (計為0)，確定要儲存嗎?`)) return;
     }
 
     const formatTimeStr = (ts: number) => {

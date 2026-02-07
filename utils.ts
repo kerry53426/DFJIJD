@@ -10,6 +10,12 @@ export const formatCurrency = (amount: number): string => {
   }).format(amount);
 };
 
+// Floor minutes to the nearest 30 minutes
+// < 30 -> 0, 30-59 -> 30, 60-89 -> 60
+export const roundTo30Minutes = (minutes: number): number => {
+  return Math.floor(minutes / 30) * 30;
+};
+
 // Calculate duration in minutes between two HH:mm strings
 export const calculateDurationMinutes = (start: string, end: string): number => {
   if (!start || !end) return 0;

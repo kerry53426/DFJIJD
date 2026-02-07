@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Save, Clock, DollarSign, Calendar, Zap, Edit3, CheckCircle, Coffee } from 'lucide-react';
+import { Save, Clock, DollarSign, Calendar, Zap, Edit3, CheckCircle, Coffee, Info } from 'lucide-react';
 import { WorkLog } from '../types';
-import { calculateDurationMinutes, calculatePayBreakdown, formatCurrency, formatDuration } from '../utils';
+import { calculateDurationMinutes, calculatePayBreakdown, formatCurrency, formatDuration, roundTo30Minutes } from '../utils';
 import ClockInTimer from './ClockInTimer';
 
 interface WorkEntryFormProps {
@@ -38,7 +38,9 @@ const WorkEntryForm: React.FC<WorkEntryFormProps> = ({ onAddLog, defaultRate, pa
 
   // Real-time calculation for Work
   const rawDuration = calculateDurationMinutes(startTime, endTime);
-  const actualWorkMinutes = Math.max(0, rawDuration - breakMinutes);
+  // Apply 30-minute rounding logic to the net work minutes
+  const netMinutes = Math.max(0, rawDuration - breakMinutes);
+  const actualWorkMinutes = roundTo30Minutes(netMinutes);
   
   const { regularMinutes, overtimeLevel1Minutes, overtimeLevel2Minutes, totalPay } = calculatePayBreakdown(actualWorkMinutes, hourlyRate);
   const hasOvertime = overtimeLevel1Minutes > 0 || overtimeLevel2Minutes > 0;
@@ -56,7 +58,7 @@ const WorkEntryForm: React.FC<WorkEntryFormProps> = ({ onAddLog, defaultRate, pa
     e.preventDefault();
 
     if (actualWorkMinutes <= 0) {
-      alert("工作時數必須大於 0 (請檢查結束時間或休息時間)");
+      alert("計算後工作時數為 0 (未滿 30 分鐘不予計算)");
       return;
     }
 
@@ -222,10 +224,17 @@ const WorkEntryForm: React.FC<WorkEntryFormProps> = ({ onAddLog, defaultRate, pa
           <div className={`p-4 rounded-lg border grid grid-cols-2 gap-4 text-center transition-colors ${hasOvertime ? 'bg-amber-50 border-amber-200' : 'bg-stone-50 border-stone-200'}`}>
               <div>
                 <p className="text-xs text-stone-500 uppercase font-semibold">實際工時</p>
-                <p className="text-lg font-bold text-stone-800 flex justify-center items-center gap-1">
-                  <Clock className="w-4 h-4" />
-                  {formatDuration(actualWorkMinutes)}
-                </p>
+                <div className="flex flex-col items-center justify-center">
+                  <p className="text-lg font-bold text-stone-800 flex justify-center items-center gap-1">
+                    <Clock className="w-4 h-4" />
+                    {formatDuration(actualWorkMinutes)}
+                  </p>
+                  {actualWorkMinutes !== netMinutes && (
+                    <p className="text-[10px] text-stone-400 flex items-center gap-1">
+                       (原始 {formatDuration(netMinutes)} • 未滿30分捨去)
+                    </p>
+                  )}
+                </div>
                 {hasOvertime && (
                    <p className="text-xs text-amber-600 mt-1 flex items-center justify-center gap-1">
                       <Zap className="w-3 h-3" />
